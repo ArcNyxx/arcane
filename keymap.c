@@ -1,6 +1,35 @@
+/* arcane - qmk keyboard configuration
+ * Copyright (C) 2022 ArcNyxx
+ * see LICENCE file for licensing information */
+
 #include QMK_KEYBOARD_H
 #include "version.h"
-#include "keymap.h"
+
+#define MKDANCE(num, key1, key2, key3)                                        \
+enum { DANCE ## num = num };                                                  \
+                                                                              \
+void                                                                          \
+dance ## num ## _fin(qk_tap_dance_state_t *state, void *data)                 \
+{                                                                             \
+        if (state->count == 1)                                                \
+                register_code16(key1);                                        \
+        else if (state->count == 2)                                           \
+                register_code16(key2);                                        \
+        else if (state->count == 3)                                           \
+                register_code16(key3);                                        \
+}                                                                             \
+                                                                              \
+void                                                                          \
+dance ## num ## _set(qk_tap_dance_state_t *state, void *data)                 \
+{                                                                             \
+        wait_ms(10);                                                          \
+        if (state->count == 1)                                                \
+                unregister_code16(key1);                                      \
+        else if (state->count == 2)                                           \
+                unregister_code16(key2);                                      \
+        else if (state->count == 3)                                           \
+                unregister_code16(key3);                                      \
+}
 
 MKDANCE(1, KC_F1,  KC_F2,  KC_F3)
 MKDANCE(2, KC_F4,  KC_F5,  KC_F6)
@@ -14,7 +43,7 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
-enum { DISCO = EZ_SAFE_RANGE, MACRO };
+enum { DISCO = EZ_SAFE_RANGE, MACRO }; /* extra keycodes after safe range */
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_ergodox_pretty(
 		KC_TRNS, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
@@ -43,14 +72,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #define EASE(num) ((uint32_t)(num) * (num) * (num) / 255 / 255)
 #define VALD(prog, i, centre) (EASE(prog) * 5 / (5 + DIST(i, centre)))
 
-static bool disco = true;
-static uint8_t lhue, lprog, lcentre, lkeys;
-static uint8_t rhue, rprog, rcentre, rkeys;
-static uint16_t timer;
+bool disco = true;
+uint8_t lhue, lprog = 0, lkeys = 0, lcentre;
+uint8_t rhue, rprog = 0, rkeys = 0, rcentre;
+uint16_t timer;
 
 void
 keyboard_post_init_user(void)
 {
+	/* initialise backlights after rest of hardware ready */
 	rgblight_enable_noeeprom();
 	rgblight_mode_noeeprom(1);
 	rgblight_sethsv_noeeprom(0, 0, 0);
@@ -64,13 +94,11 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 		if (record->event.pressed)
 			SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100)
 					SS_LSFT(SS_TAP(X_DOT)));
-		return false;
+		return false; /* halt processing */
 	case DISCO:
-		if (record->event.pressed) {
-			disco = !disco;
-			lprog = lkeys = rprog = rkeys = 0;
-		}
-		return false;
+		if (record->event.pressed)
+			disco = !disco, lprog = lkeys = rprog = rkeys = 0;
+		return false; /* halt processing */
 	default:
 		return true;
 	}
@@ -89,7 +117,7 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 			--rkeys;
 		return;
 	}
-	
+
 	if (record->event.key.row < 7) {
 		lhue = rand() % 255, lprog = 255, ++lkeys;
 		lcentre = 30 - (record->event.key.row * 2 + 2);
@@ -97,11 +125,11 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 			sethsv(lhue, 255, VALD(lprog, i, lcentre), &led[i]);
 	} else {
 		rhue = rand() % 255, rprog = 255, ++rkeys;
-		rcentre = 30 - (record->event.key.row * 2 + 2);
-		for (int i = LEDS; i < LEDS / 2; ++i)
+		rcentre = (13 - record->event.key.row) * 2 + 1;
+		for (int i = 0; i < LEDS / 2; ++i)
 			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
 	}
-	rgblight_set();
+	rgblight_set(); /* flush */
 }
 
 void
@@ -127,5 +155,5 @@ matrix_scan_user(void)
 		for (int i = 0; i < LEDS / 2; ++i)
 			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
 	}
-	rgblight_set();
+	rgblight_set(); /* flush */
 }
