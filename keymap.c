@@ -1,13 +1,22 @@
 #include QMK_KEYBOARD_H
 #include "version.h"
+#include "keymap.h"
 
 enum {
 	DISCO = EZ_SAFE_RANGE,
 	MACRO
 };
 
-enum {
-	TAP_1, TAP_2, TAP_3, TAP_4
+MKDANCE(1, KC_F1,  KC_F2,  KC_F3)
+MKDANCE(2, KC_F4,  KC_F5,  KC_F6)
+MKDANCE(3, KC_F7,  KC_F8,  KC_F9)
+MKDANCE(4, KC_F10, KC_F11, KC_F12)
+
+qk_tap_dance_action_t tap_dance_actions[] = {
+	[DANCE1] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance1_fin, dance1_set),
+	[DANCE2] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance2_fin, dance2_set),
+	[DANCE3] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance3_fin, dance3_set),
+	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -27,14 +36,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		KC_LCTRL,  KC_RALT,   DISCO,     KC_CAPS,   KC_LGUI,
 		KC_LEFT,   KC_DOWN,   KC_UP,     KC_RIGHT,  KC_RCTRL,
 
-		TD(TAP_1), TD(TAP_2), TD(TAP_3), TD(TAP_4),
+		TD(DANCE1), TD(DANCE2), TD(DANCE3), TD(DANCE4),
 		KC_TRNS,   KC_TRNS,
 		KC_SPACE,  KC_ESCAPE, KC_UNDS,
 		MACRO,     KC_BSPACE, KC_ENTER
 	)
 };
 
-rgblight_config_t rgbset;
 static bool disco = true;
 
 uint8_t lhue;
@@ -46,23 +54,19 @@ uint16_t timer;
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	if (keycode == MACRO) {
+	switch (keycode) {
+	case MACRO:
 		if (record->event.pressed)
 			SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100)
 					SS_LSFT(SS_TAP(X_DOT)));
 		return false;
-	}
-	if (keycode == DISCO) {
-		if (record->event.pressed) {
-			rgblight_enable_noeeprom();
-			rgblight_mode_noeeprom(1);
-			rgblight_sethsv_noeeprom(0, 0, 0);
-
+	case DISCO:
+		if (record->event.pressed)
 			disco = !disco;
-		}
 		return false;
+	default:
+		return true;
 	}
-	return true;
 }
 
 void
@@ -108,45 +112,7 @@ matrix_scan_user(void)
 void
 keyboard_post_init_user(void)
 {
-	layer_state_set_user(layer_state);
+	rgblight_enable_noeeprom();
+	rgblight_mode_noeeprom(1);
+	rgblight_sethsv_noeeprom(0, 0, 0);
 }
-
-#define CONCT(x, y) x ## y
-#define CONCT3(x, y, z) x ## y ## z
-#define DANCE(num, key1, key2, key3)                                          \
-void CONCT3(dance, num, _fin)(qk_tap_dance_state_t *state, void *data);       \
-void CONCT3(dance, num, _set)(qk_tap_dance_state_t *state, void *data);       \
-                                                                              \
-void                                                                          \
-CONCT3(dance, num, _fin)(qk_tap_dance_state_t *state, void *data)             \
-{                                                                             \
-	if (state->count == 1)                                                \
-		register_code16(key1);                                        \
-	else if (state->count == 2)                                           \
-		register_code16(key2);                                        \
-	else if (state->count == 3)                                           \
-		register_code16(key3);                                        \
-}                                                                             \
-                                                                              \
-void                                                                          \
-CONCT3(dance, num, _set)(qk_tap_dance_state_t *state, void *data)             \
-{                                                                             \
-	wait_ms(10);                                                          \
-	if (state->count == 1)                                                \
-		unregister_code16(key1);                                      \
-	else if (state->count == 2)                                           \
-		unregister_code16(key2);                                      \
-	else if (state->count == 3)                                           \
-		unregister_code16(key3);                                      \
-}
-DANCE(1, KC_F1,  KC_F2,  KC_F3)
-DANCE(2, KC_F4,  KC_F5,  KC_F6)
-DANCE(3, KC_F7,  KC_F8,  KC_F9)
-DANCE(4, KC_F10, KC_F11, KC_F12)
-
-#define DANCE_ADD(num)                                                        \
-[CONCT(TAP_, num)] = ACTION_TAP_DANCE_FN_ADVANCED(NULL,                       \
-		CONCT3(dance, num, _fin), CONCT3(dance, num, _set))
-qk_tap_dance_action_t tap_dance_actions[] = {
-	DANCE_ADD(1), DANCE_ADD(2), DANCE_ADD(3), DANCE_ADD(4)
-};
