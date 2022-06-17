@@ -2,11 +2,6 @@
 #include "version.h"
 #include "keymap.h"
 
-enum {
-	DISCO = EZ_SAFE_RANGE,
-	MACRO
-};
-
 MKDANCE(1, KC_F1,  KC_F2,  KC_F3)
 MKDANCE(2, KC_F4,  KC_F5,  KC_F6)
 MKDANCE(3, KC_F7,  KC_F8,  KC_F9)
@@ -19,27 +14,27 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
+enum { DISCO = EZ_SAFE_RANGE, MACRO };
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_ergodox_pretty(
-		KC_TRNS,   KC_1, KC_2, KC_3, KC_4, KC_5, KC_TRNS,
-		KC_TRNS,   KC_6, KC_7, KC_8, KC_9, KC_0, KC_TRNS,
+		KC_TRNS, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
+		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_TRNS,
 
-		KC_GRAVE,  KC_Q, KC_W, KC_E, KC_R, KC_T, KC_EQUAL,
-		KC_MINUS,  KC_Y, KC_U, KC_I, KC_O, KC_P, KC_BSLASH,
+		KC_GRV,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_EQL,
+		KC_MINS, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSLS,
 
-		KC_TAB,    KC_A, KC_S, KC_D, KC_F, KC_G,
-		           KC_H, KC_J, KC_K, KC_L, KC_SCOLON, KC_QUOTE,
+		KC_TAB,  KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
+		         KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,
 
-		KC_LSHIFT, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_LBRC,
-		KC_RBRC,   KC_N, KC_M, KC_COMMA, KC_DOT, KC_SLASH, KC_RSHIFT,
+		KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_LBRC,
+		KC_RBRC, KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,
 
-		KC_LCTRL,  KC_RALT,   DISCO,     KC_CAPS,   KC_LGUI,
-		KC_LEFT,   KC_DOWN,   KC_UP,     KC_RIGHT,  KC_RCTRL,
+		KC_LCTL, KC_RALT, DISCO,   KC_CAPS, KC_LGUI,
+		KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_RCTL,
 
 		TD(DANCE1), TD(DANCE2), TD(DANCE3), TD(DANCE4),
-		KC_TRNS,   KC_TRNS,
-		KC_SPACE,  KC_ESCAPE, KC_UNDS,
-		MACRO,     KC_BSPACE, KC_ENTER
+		KC_TRNS, KC_TRNS,
+		KC_SPC,  KC_ESC, KC_UNDS,  MACRO,   KC_BSPC, KC_ENT
 	)
 };
 
@@ -50,6 +45,14 @@ uint8_t rhue;
 uint8_t lval;
 uint8_t rval;
 uint16_t timer;
+
+void
+keyboard_post_init_user(void)
+{
+	rgblight_enable_noeeprom();
+	rgblight_mode_noeeprom(1);
+	rgblight_sethsv_noeeprom(0, 0, 0);
+}
 
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
@@ -107,12 +110,4 @@ matrix_scan_user(void)
 		rval -= 5;
 		rgblight_sethsv_range(rhue, 255, EASE(rval), 0, LEDS / 2);
 	}
-}
-
-void
-keyboard_post_init_user(void)
-{
-	rgblight_enable_noeeprom();
-	rgblight_mode_noeeprom(1);
-	rgblight_sethsv_noeeprom(0, 0, 0);
 }
