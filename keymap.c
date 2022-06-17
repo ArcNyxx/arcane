@@ -38,13 +38,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-static bool disco = true;
+#define LEDS (uint8_t)RGBLED_NUM
+#define DIST(x, y) ((x) > (y) ? (x) - (y) : (y) - (x))
+#define EASE(num) ((uint32_t)(num) * (num) * (num) / 255 / 255)
+#define VALD(prog, i, centre) (EASE(prog) * 5 / (5 + DIST(i, centre)))
 
-uint8_t lhue;
-uint8_t rhue;
-uint8_t lval;
-uint8_t rval;
-uint16_t timer;
+static bool disco = true;
+static uint8_t lhue, lprog, lcentre, lkeys;
+static uint8_t rhue, rprog, rcentre, rkeys;
+static uint16_t timer;
 
 void
 keyboard_post_init_user(void)
@@ -64,8 +66,10 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 					SS_LSFT(SS_TAP(X_DOT)));
 		return false;
 	case DISCO:
-		if (record->event.pressed)
+		if (record->event.pressed) {
 			disco = !disco;
+			lprog = lkeys = rprog = rkeys = 0;
+		}
 		return false;
 	default:
 		return true;
@@ -75,16 +79,29 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 void
 post_process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-#define LEDS (uint8_t)RGBLED_NUM
-	if (disco && record->event.pressed) {
-		if (record->event.key.row < 7) {
-			lhue = rand() % 255, lval = 255;
-			rgblight_sethsv_range(lhue, 255, 255, LEDS / 2, LEDS);
-		} else {
-			rhue = rand() % 255, rval = 255;
-			rgblight_sethsv_range(rhue, 255, 255, 0, LEDS / 2);
-		}
+	if (!disco)
+		return;
+
+	if (!record->event.pressed) {
+		if (record->event.key.row < 7 && lkeys > 0)
+			--lkeys;
+		else if (record->event.key.row >= 7 && rkeys > 0)
+			--rkeys;
+		return;
 	}
+	
+	if (record->event.key.row < 7) {
+		lhue = rand() % 255, lprog = 255, ++lkeys;
+		lcentre = 30 - (record->event.key.row * 2 + 2);
+		for (int i = LEDS / 2; i < LEDS; ++i)
+			sethsv(lhue, 255, VALD(lprog, i, lcentre), &led[i]);
+	} else {
+		rhue = rand() % 255, rprog = 255, ++rkeys;
+		rcentre = 30 - (record->event.key.row * 2 + 2);
+		for (int i = LEDS; i < LEDS / 2; ++i)
+			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
+	}
+	rgblight_set();
 }
 
 void
@@ -96,18 +113,19 @@ matrix_init_user(void)
 void
 matrix_scan_user(void)
 {
-#define EASE(val) ((uint32_t)val * val * val / 255 / 255)
-	if (!(disco && (lval > 0 || rval > 0) && timer_elapsed(timer) > 20))
+	if (!(disco && (lprog > 0 || rprog > 0) && timer_elapsed(timer) > 20))
 		return;
-
 	timer = timer_read();
 
-	if (lval > 0) {
-		lval -= 5;
-		rgblight_sethsv_range(lhue, 255, EASE(lval), LEDS / 2, LEDS);
+	if (lkeys == 0 && lprog > 0) {
+		lprog -= 5;
+		for (int i = LEDS / 2; i < LEDS; ++i)
+			sethsv(lhue, 255, VALD(lprog, i, lcentre), &led[i]);
 	}
-	if (rval > 0) {
-		rval -= 5;
-		rgblight_sethsv_range(rhue, 255, EASE(rval), 0, LEDS / 2);
+	if (rkeys == 0 && rprog > 0) {
+		rprog -= 5;
+		for (int i = 0; i < LEDS / 2; ++i)
+			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
 	}
+	rgblight_set();
 }
