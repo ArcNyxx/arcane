@@ -2,9 +2,8 @@
 #include "version.h"
 
 enum {
-	RGB_SLD = EZ_SAFE_RANGE,
-	MACRO_1,
-	DISCO_TIME
+	DISCO = EZ_SAFE_RANGE,
+	MACRO
 };
 
 enum {
@@ -25,44 +24,43 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		KC_LSHIFT, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_LBRC,
 		KC_RBRC,   KC_N, KC_M, KC_COMMA, KC_DOT, KC_SLASH, KC_RSHIFT,
 
-		KC_LCTRL, KC_RALT, KC_TRNS, KC_CAPS, KC_LGUI,
-		KC_LEFT, KC_DOWN, KC_UP, KC_RIGHT, KC_RCTRL,
+		KC_LCTRL,  KC_RALT,   DISCO,     KC_CAPS,   KC_LGUI,
+		KC_LEFT,   KC_DOWN,   KC_UP,     KC_RIGHT,  KC_RCTRL,
 
 		TD(TAP_1), TD(TAP_2), TD(TAP_3), TD(TAP_4),
-		KC_TRNS, KC_TRNS,
-		KC_SPACE, KC_ESCAPE, KC_UNDS,
-		MACRO_1, KC_BSPACE, KC_ENTER
+		KC_TRNS,   KC_TRNS,
+		KC_SPACE,  KC_ESCAPE, KC_UNDS,
+		MACRO,     KC_BSPACE, KC_ENTER
 	)
 };
 
 rgblight_config_t rgbset;
-int disco_enabled = 1;
+static bool disco = true;
+
+uint8_t lhue;
+uint8_t rhue;
+uint8_t lval;
+uint8_t rval;
+uint16_t timer;
 
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	switch (keycode) {
-	case RGB_SLD:
-		if (record->event.pressed)
-			rgblight_mode(1);
-		return false;
-	case MACRO_1:
+	if (keycode == MACRO) {
 		if (record->event.pressed)
 			SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100)
 					SS_LSFT(SS_TAP(X_DOT)));
-		break;
-	case DISCO_TIME:
-		if (record->event.pressed) {
-			disco_enabled ^= 1;
-
-                	rgblight_enable_noeeprom();
-                	rgblight_mode_noeeprom(1);
-                	rgblight_sethsv_noeeprom(0, 0, 0);
-		}
-
 		return false;
-	default:
-		break;
+	}
+	if (keycode == DISCO) {
+		if (record->event.pressed) {
+			rgblight_enable_noeeprom();
+			rgblight_mode_noeeprom(1);
+			rgblight_sethsv_noeeprom(0, 0, 0);
+
+			disco = !disco;
+		}
+		return false;
 	}
 	return true;
 }
@@ -70,15 +68,40 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 void
 post_process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	if (disco_enabled && record->event.pressed) {
+#define LEDS (uint8_t)RGBLED_NUM
+	if (disco && record->event.pressed) {
 		if (record->event.key.row < 7) {
-			rgblight_sethsv_range(rand() % 255, 255, 255,
-					(uint8_t)RGBLED_NUM / 2,
-					(uint8_t)RGBLED_NUM);
+			lhue = rand() % 255, lval = 255;
+			rgblight_sethsv_range(lhue, 255, 255, LEDS / 2, LEDS);
 		} else {
-			rgblight_sethsv_range(rand() % 255, 255, 255, 0,
-					(uint8_t)RGBLED_NUM / 2);
+			rhue = rand() % 255, rval = 255;
+			rgblight_sethsv_range(rhue, 255, 255, 0, LEDS / 2);
 		}
+	}
+}
+
+void
+matrix_init_user(void)
+{
+	timer = timer_read();
+}
+
+void
+matrix_scan_user(void)
+{
+#define EASE(val) ((uint32_t)val * val * val / 255 / 255)
+	if (!(disco && (lval > 0 || rval > 0) && timer_elapsed(timer) > 20))
+		return;
+
+	timer = timer_read();
+
+	if (lval > 0) {
+		lval -= 5;
+		rgblight_sethsv_range(lhue, 255, EASE(lval), LEDS / 2, LEDS);
+	}
+	if (rval > 0) {
+		rval -= 5;
+		rgblight_sethsv_range(rhue, 255, EASE(rval), 0, LEDS / 2);
 	}
 }
 
@@ -103,8 +126,6 @@ CONCT3(dance, num, _fin)(qk_tap_dance_state_t *state, void *data)             \
 		register_code16(key2);                                        \
 	else if (state->count == 3)                                           \
 		register_code16(key3);                                        \
-	else                                                                  \
-		rgblight_mode(4);                                             \
 }                                                                             \
                                                                               \
 void                                                                          \
