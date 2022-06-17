@@ -1,0 +1,4 @@
+#undef TAPPING_TERM
+#define TAPPING_TERM 270
+
+#define ERGODOX_LED_30
