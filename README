@@ -1,30 +1,11 @@
 arcane - qmk keyboard configuration
 ===================================
-arcane is a flashy mechanical keyboard configuration with some special lighting
-functionality. arcane lights up reactively when a key is pressed and operates
-independently on both sides of a split keyboard.
+arcane is a flashy mechanical keyboard configuration made with qmk.  arcane
+features split reactive backlighting with a qwerty layout and macros for ease
+of typing.
 
 Installation
 ------------
-Install qmk firmware and teensy_loader_cli:
-
-    $ git clone --recurse-submodules https://github.com/zsa/qmk_firmware/
-    # pacman -S teensy_loader_cli
-
-Downgrade avr-gcc to version 8.3.0:
-
-    # pacman -U https://archive.archlinux.org/packages/a/avr-gcc/avr-gcc-8.3.0-1-x86_64.pkg.tar.xz
-
-Install udev rules:
-
-    # cp qmk_firmware/util/udev/50-qmk.rules /etc/udev/rules.d/
-
-Clone arcane and move it to the proper location:
-
-    $ git clone https://github.com/arcnyxx/arcane/
-    $ mv arcane qmk_firmware/keyboards/ergodox_ez/glow/keymaps
-
-Build and flash arcane:
-
-    $ cd qmk_firmware; make -j 1 ergodox_ez/glow:arcane:flash
-
+arcane can be flashed onto an Ergodox-EZ keyboard on an Arch Linux system using
+the arcane.sh script.  The comments in this script may guide users with
+different keyboards on other operating systems.
