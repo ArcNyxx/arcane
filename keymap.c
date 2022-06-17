@@ -68,9 +68,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 #define LEDS (uint8_t)RGBLED_NUM
-#define DIST(x, y) ((x) > (y) ? (x) - (y) : (y) - (x))
 #define EASE(num) ((uint32_t)(num) * (num) * (num) / 255 / 255)
-#define VALD(prog, i, centre) (EASE(prog) * 5 / (5 + DIST(i, centre)))
+#define VALD(prog, ind, cent) EASE(prog) * 5 / \
+		((ind > cent ? ind - cent : cent - ind) + 5)
 
 bool disco = true;
 uint8_t lhue, lprog = 0, lkeys = 0, lcentre;
