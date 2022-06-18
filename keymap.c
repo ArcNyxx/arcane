@@ -67,9 +67,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-#define EASE(num) ((uint32_t)(num) * (num) * (num) / 255 / 255)
-#define VALD(val, ind, cent) EASE(val) * 5 / (BASE(ind, cent) + 5)
-#define BASE(ind, mid) ((ind) > (mid) ? (ind) - (mid) : (mid) - (ind))
+#define BASE(val, ind, mid) ((uint32_t)(val) * (val) * (val) / 255 / 255) * \
+	5 / (((ind) > (mid) ? (ind) - (mid) : (mid) - (ind)) + 5)
 
 bool disco = true;
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
@@ -89,7 +88,8 @@ bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
 	if (keycode == MACRO && record->event.pressed)
-		SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
+		SEND_STRING(SS_TAP(X_MINUS)
+				SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
 	else if (keycode == DISCO && record->event.pressed)
 		disco = !disco, lval = rval = lkeys = rkeys = 0;
 	return true;
@@ -118,7 +118,7 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 			lmid = 30 - (2 * record->event.key.row + 2);
 
 		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
-			sethsv(lhue, 255, VALD(lval, i, lmid), &led[i]);
+			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
 	} else {
 		rhue = rand() % 255, rval = 255, ++rkeys;
 
@@ -128,7 +128,7 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 			rmid = (13 - record->event.key.row) * 2 + 1;
 
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
-			sethsv(rhue, 255, VALD(rval, i, rmid), &led[i]);
+			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
 	rgblight_set(); /* flush */
 }
@@ -149,12 +149,12 @@ matrix_scan_user(void)
 	if (lkeys == 0 && lval > 0) {
 		lval -= 5;
 		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
-			sethsv(lhue, 255, VALD(lval, i, lmid), &led[i]);
+			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
 	}
 	if (rkeys == 0 && rval > 0) {
 		rval -= 5;
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
-			sethsv(rhue, 255, VALD(rval, i, rmid), &led[i]);
+			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
 	rgblight_set(); /* flush */
 }
