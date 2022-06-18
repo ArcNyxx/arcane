@@ -67,14 +67,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-#define LEDS (uint8_t)RGBLED_NUM
 #define EASE(num) ((uint32_t)(num) * (num) * (num) / 255 / 255)
-#define VALD(prog, ind, cent) EASE(prog) * 5 / (BASE(ind, cent) + 5)
+#define VALD(val, ind, cent) EASE(val) * 5 / (BASE(ind, cent) + 5)
 #define BASE(ind, mid) ((ind) > (mid) ? (ind) - (mid) : (mid) - (ind))
 
 bool disco = true;
-uint8_t lhue, lprog = 0, lkeys = 0, lcentre;
-uint8_t rhue, rprog = 0, rkeys = 0, rcentre;
+uint8_t lhue, lval = 0, lkeys = 0, lmid;
+uint8_t rhue, rval = 0, rkeys = 0, rmid;
 uint16_t timer;
 
 void
@@ -92,12 +91,12 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 	switch (keycode) {
 	case MACRO:
 		if (record->event.pressed)
-			SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100)
-					SS_LSFT(SS_TAP(X_DOT)));
+			SEND_STRING(SS_TAP(X_MINUS)
+					SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
 		break;
 	case DISCO:
 		if (record->event.pressed)
-			disco = !disco, lprog = lkeys = rprog = rkeys = 0;
+			disco = !disco, lval = rval = lkeys = rkeys = 0;
 		break;
 	default:
 		break;
@@ -120,25 +119,25 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 	}
 
 	if (record->event.key.row < 7) {
-		lhue = rand() % 255, lprog = 255, ++lkeys;
+		lhue = rand() % 255, lval = 255, ++lkeys;
 
 		if (record->event.key.col == 5)
-			lcentre = 15;
+			lmid = 15;
 		else
-			lcentre = 30 - (2 * record->event.key.row + 2);
+			lmid = 30 - (2 * record->event.key.row + 2);
 
-		for (int i = LEDS / 2; i < LEDS; ++i)
-			sethsv(lhue, 255, VALD(lprog, i, lcentre), &led[i]);
+		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
+			sethsv(lhue, 255, VALD(lval, i, lmid), &led[i]);
 	} else {
-		rhue = rand() % 255, rprog = 255, ++rkeys;
+		rhue = rand() % 255, rval = 255, ++rkeys;
 
 		if (record->event.key.col == 5)
-			rcentre = 14;
+			rmid = 14;
 		else
-			rcentre = (13 - record->event.key.row) * 2 + 1;
+			rmid = (13 - record->event.key.row) * 2 + 1;
 
-		for (int i = 0; i < LEDS / 2; ++i)
-			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
+		for (int i = 0; i < RGBLED_NUM / 2; ++i)
+			sethsv(rhue, 255, VALD(rval, i, rmid), &led[i]);
 	}
 	rgblight_set(); /* flush */
 }
@@ -152,19 +151,19 @@ matrix_init_user(void)
 void
 matrix_scan_user(void)
 {
-	if (!(disco && (lprog > 0 || rprog > 0) && timer_elapsed(timer) > 20))
+	if (!(disco && (lval > 0 || rval > 0) && timer_elapsed(timer) > 20))
 		return;
 	timer = timer_read();
 
-	if (lkeys == 0 && lprog > 0) {
-		lprog -= 5;
-		for (int i = LEDS / 2; i < LEDS; ++i)
-			sethsv(lhue, 255, VALD(lprog, i, lcentre), &led[i]);
+	if (lkeys == 0 && lval > 0) {
+		lval -= 5;
+		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
+			sethsv(lhue, 255, VALD(lval, i, lmid), &led[i]);
 	}
-	if (rkeys == 0 && rprog > 0) {
-		rprog -= 5;
-		for (int i = 0; i < LEDS / 2; ++i)
-			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
+	if (rkeys == 0 && rval > 0) {
+		rval -= 5;
+		for (int i = 0; i < RGBLED_NUM / 2; ++i)
+			sethsv(rhue, 255, VALD(rval, i, rmid), &led[i]);
 	}
 	rgblight_set(); /* flush */
 }
