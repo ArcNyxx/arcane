@@ -151,7 +151,7 @@ matrix_init_user(void)
 void
 matrix_scan_user(void)
 {
-	if (!(disco && (lval > 0 || rval > 0) && timer_elapsed(timer) > 20))
+	if (!((lval > 0 || rval > 0) && timer_elapsed(timer) > 20))
 		return;
 	timer = timer_read();
 
