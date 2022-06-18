@@ -88,19 +88,10 @@ keyboard_post_init_user(void)
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	switch (keycode) {
-	case MACRO:
-		if (record->event.pressed)
-			SEND_STRING(SS_TAP(X_MINUS)
-					SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
-		break;
-	case DISCO:
-		if (record->event.pressed)
-			disco = !disco, lval = rval = lkeys = rkeys = 0;
-		break;
-	default:
-		break;
-	}
+	if (keycode == MACRO && record->event.pressed)
+		SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
+	else if (keycode == DISCO && record->event.pressed)
+		disco = !disco, lval = rval = lkeys = rkeys = 0;
 	return true;
 }
 
