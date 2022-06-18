@@ -69,8 +69,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 #define LEDS (uint8_t)RGBLED_NUM
 #define EASE(num) ((uint32_t)(num) * (num) * (num) / 255 / 255)
-#define VALD(prog, ind, cent) EASE(prog) * 5 / \
-		((ind > cent ? ind - cent : cent - ind) + 5)
+#define VALD(prog, ind, cent) EASE(prog) * 5 / (BASE(ind, cent) + 5)
+#define BASE(ind, mid) ((ind) > (mid) ? (ind) - (mid) : (mid) - (ind))
 
 bool disco = true;
 uint8_t lhue, lprog = 0, lkeys = 0, lcentre;
@@ -94,14 +94,15 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 		if (record->event.pressed)
 			SEND_STRING(SS_TAP(X_MINUS) SS_DELAY(100)
 					SS_LSFT(SS_TAP(X_DOT)));
-		return false; /* halt processing */
+		break;
 	case DISCO:
 		if (record->event.pressed)
 			disco = !disco, lprog = lkeys = rprog = rkeys = 0;
-		return false; /* halt processing */
+		break;
 	default:
-		return true;
+		break;
 	}
+	return true;
 }
 
 void
@@ -120,12 +121,22 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 
 	if (record->event.key.row < 7) {
 		lhue = rand() % 255, lprog = 255, ++lkeys;
-		lcentre = 30 - (record->event.key.row * 2 + 2);
+
+		if (record->event.key.col == 5)
+			lcentre = 15;
+		else
+			lcentre = 30 - (2 * record->event.key.row + 2);
+
 		for (int i = LEDS / 2; i < LEDS; ++i)
 			sethsv(lhue, 255, VALD(lprog, i, lcentre), &led[i]);
 	} else {
 		rhue = rand() % 255, rprog = 255, ++rkeys;
-		rcentre = (13 - record->event.key.row) * 2 + 1;
+
+		if (record->event.key.col == 5)
+			rcentre = 14;
+		else
+			rcentre = (13 - record->event.key.row) * 2 + 1;
+
 		for (int i = 0; i < LEDS / 2; ++i)
 			sethsv(rhue, 255, VALD(rprog, i, rcentre), &led[i]);
 	}
