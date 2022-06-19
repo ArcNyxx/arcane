@@ -6,7 +6,7 @@ special keys located for vim programming.
 
 Installation
 ------------
-arcane can be built and flashed with the following commands:
+arcane can be downloaded, built, and flashed with the following commands:
 
     $ # download qmk firmware from zsa, compiler, teensy loader for flashing
     $ [ ! -d 'qmk_firmware' ] && \ 
@@ -24,7 +24,7 @@ arcane can be built and flashed with the following commands:
     # [ ! -f /etc/udev/rules.d/50-qmk.rules ] && \
         cp util/udev/50-qmk.rules /etc/udev/rules.d/
     $ git clone https://github.com/arcnyxx/arcane/
-    $ mv arcane keyboards/ergodox_ez/shine/keymaps/
+    $ mv arcane keyboards/ergodox_ez/shine/keymaps/arcane
     $ make -j 1 ergodox_ez/shine:arcane:flash
 
 
