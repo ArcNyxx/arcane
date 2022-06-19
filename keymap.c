@@ -140,11 +140,15 @@ matrix_scan_user(void)
 		return;
 	timer = timer_read();
 
-	if (lkeys == 0 && lval > 0)
+	if (lkeys == 0 && lval > 0) {
+		lval -= 5;
 		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
-			sethsv(lhue, 255, BASE(lval -= 5, i, lmid), &led[i]);
-	if (rkeys == 0 && rval > 0)
+			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
+	}
+	if (rkeys == 0 && rval > 0) {
+		rval -= 5;
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
-			sethsv(rhue, 255, BASE(rval -= 5, i, rmid), &led[i]);
+			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
+	}
 	rgblight_set(); /* flush */
 }
