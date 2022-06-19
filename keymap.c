@@ -112,21 +112,15 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 	}
 
 	if (record->event.key.row < 7) {
-		lhue = rand() % 255, lval = 255, ++lkeys;
-
-		lmid = 15;
+		lhue = rand() % 255, lval = 255, ++lkeys, lmid = 15;
 		if (record->event.key.col != 5)
 			lmid = 28 - 2 * record->event.key.row;
-
 		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
 			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
 	} else {
-		rhue = rand() % 255, rval = 255, ++rkeys;
-
-		rmid = 14;
+		rhue = rand() % 255, rval = 255, ++rkeys, rmid = 14;
 		if (record->event.key.col != 5)
 			rmid = 27 - 2 * record->event.key.row;
-
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
 			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
@@ -146,15 +140,11 @@ matrix_scan_user(void)
 		return;
 	timer = timer_read();
 
-	if (lkeys == 0 && lval > 0) {
-		lval -= 5;
+	if (lkeys == 0 && lval > 0)
 		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
-			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
-	}
-	if (rkeys == 0 && rval > 0) {
-		rval -= 5;
+			sethsv(lhue, 255, BASE(lval -= 5, i, lmid), &led[i]);
+	if (rkeys == 0 && rval > 0)
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
-			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
-	}
+			sethsv(rhue, 255, BASE(rval -= 5, i, rmid), &led[i]);
 	rgblight_set(); /* flush */
 }
