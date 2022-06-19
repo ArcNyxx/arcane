@@ -5,10 +5,14 @@
 #include QMK_KEYBOARD_H
 #include "version.h"
 
+#define BASE(val, ind, mid) ((uint32_t)(val) * (val) * (val) / 255 / 255) *   \
+	5 / (((ind) > (mid) ? (ind) - (mid) : (mid) - (ind)) + 5)
 #define MKDANCE(num, key1, key2, key3)                                        \
 enum { DANCE ## num = num };                                                  \
+static void dance ## num ## _fin(qk_tap_dance_state_t *state, void *data);    \
+static void dance ## num ## _set(qk_tap_dance_state_t *state, void *data);    \
                                                                               \
-void                                                                          \
+static void                                                                   \
 dance ## num ## _fin(qk_tap_dance_state_t *state, void *data)                 \
 {                                                                             \
         if (state->count == 1)                                                \
@@ -19,7 +23,7 @@ dance ## num ## _fin(qk_tap_dance_state_t *state, void *data)                 \
                 register_code16(key3);                                        \
 }                                                                             \
                                                                               \
-void                                                                          \
+static void                                                                   \
 dance ## num ## _set(qk_tap_dance_state_t *state, void *data)                 \
 {                                                                             \
         wait_ms(10);                                                          \
@@ -67,8 +71,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-#define BASE(val, ind, mid) ((uint32_t)(val) * (val) * (val) / 255 / 255) * \
-	5 / (((ind) > (mid) ? (ind) - (mid) : (mid) - (ind)) + 5)
 
 bool disco = true;
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
@@ -112,20 +114,18 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 	if (record->event.key.row < 7) {
 		lhue = rand() % 255, lval = 255, ++lkeys;
 
-		if (record->event.key.col == 5)
-			lmid = 15;
-		else
-			lmid = 30 - (2 * record->event.key.row + 2);
+		lmid = 15;
+		if (record->event.key.col != 5)
+			lmid = 28 - 2 * record->event.key.row;
 
 		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
 			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
 	} else {
 		rhue = rand() % 255, rval = 255, ++rkeys;
 
-		if (record->event.key.col == 5)
-			rmid = 14;
-		else
-			rmid = (13 - record->event.key.row) * 2 + 1;
+		rmid = 14;
+		if (record->event.key.col != 5)
+			rmid = 27 - 2 * record->event.key.row;
 
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
 			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
