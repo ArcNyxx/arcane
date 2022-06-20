@@ -15,24 +15,24 @@ static void dance ## num ## _set(qk_tap_dance_state_t *state, void *data);    \
 static void                                                                   \
 dance ## num ## _fin(qk_tap_dance_state_t *state, void *data)                 \
 {                                                                             \
-        if (state->count == 1)                                                \
-                register_code16(key1);                                        \
-        else if (state->count == 2)                                           \
-                register_code16(key2);                                        \
-        else if (state->count == 3)                                           \
-                register_code16(key3);                                        \
+	if (state->count == 1)                                                \
+		register_code16(key1);                                        \
+	else if (state->count == 2)                                           \
+		register_code16(key2);                                        \
+	else if (state->count == 3)                                           \
+		register_code16(key3);                                        \
 }                                                                             \
                                                                               \
 static void                                                                   \
 dance ## num ## _set(qk_tap_dance_state_t *state, void *data)                 \
 {                                                                             \
-        wait_ms(10);                                                          \
-        if (state->count == 1)                                                \
-                unregister_code16(key1);                                      \
-        else if (state->count == 2)                                           \
-                unregister_code16(key2);                                      \
-        else if (state->count == 3)                                           \
-                unregister_code16(key3);                                      \
+	wait_ms(10);                                                          \
+	if (state->count == 1)                                                \
+		unregister_code16(key1);                                      \
+	else if (state->count == 2)                                           \
+		unregister_code16(key2);                                      \
+	else if (state->count == 3)                                           \
+		unregister_code16(key3);                                      \
 }
 
 MKDANCE(1, KC_F1,  KC_F2,  KC_F3)
@@ -47,11 +47,11 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
-enum { DISCO = EZ_SAFE_RANGE, MACRO, KLOCK, SOLID };
+enum { DISCO = EZ_SAFE_RANGE, BLOCK, MACRO };
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_ergodox_pretty(
-		SOLID,   KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
-		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KLOCK,
+		KC_TRNS, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
+		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    BLOCK,
 
 		KC_GRV,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_EQL,
 		KC_MINS, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSLS,
@@ -71,24 +71,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-static void cond_led(uint8_t led, bool cond);
-
 bool disco = true, solid = false;
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
 uint8_t rhue, rval = 0, rkeys = 0, rmid;
 uint16_t timer;
 uint32_t sb = 0x5BCEFA, sd = 0xF5A9B8;
-
-static void
-cond_led(uint8_t led, bool cond)
-{
-	if (cond) {
-		ergodox_right_led_on(led);
-		ergodox_right_led_set(led, 150);
-	} else {
-		ergodox_right_led_off(led);
-	}
-}
 
 void
 keyboard_post_init_user(void)
@@ -102,25 +89,43 @@ keyboard_post_init_user(void)
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	static bool caps_lock, key_lock;
+	static bool caps, key;
+	static uint16_t dtimer;
 
-	if (!record->event.pressed)
-		return true;
-
-	if (keycode == KLOCK)
-		cond_led(1, key_lock = !key_lock);
-	if (key_lock)
+	if (keycode == BLOCK && record->event.pressed) {
+		if ((key = !key))
+			ergodox_right_led_1_on();
+		else
+			ergodox_right_led_1_off();
+		return false;
+	}
+	if (key)
 		return false;
 
-	switch (keycode) {
-	case MACRO:
+	if (keycode == MACRO && record->event.pressed) {
 		SEND_STRING(SS_TAP(X_MINUS)
 				SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
-		break;
-	case DISCO:
+		return true;
+	}
+
+	if (keycode == KC_CAPS && record->event.pressed) {
+		if ((caps = !caps))
+			ergodox_right_led_3_on();
+		else
+			ergodox_right_led_3_off();
+		return true;
+	}
+
+	if (keycode != DISCO)
+		return true;
+
+	if (record->event.pressed) {
+		dtimer = timer_read();
 		disco = !disco, lkeys = rkeys = 0;
-		break;
-	case SOLID:
+		return disco;
+	}
+
+	if (timer_elapsed(dtimer) >= TAPPING_TERM) {
 		if ((solid = !solid)) {
 			for (int i = 0; i < RGBLED_NUM; ++i) {
 				if (i > 7 && i < 22)
@@ -132,9 +137,7 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 		} else {
 			rgblight_setrgb(0, 0, 0);
 		}
-		break;
-	default:
-		break;
+		disco = !disco, lval = rval = lkeys = rkeys = 0;
 	}
 	return true;
 }
@@ -178,7 +181,7 @@ matrix_init_user(void)
 void
 matrix_scan_user(void)
 {
-	if (!((lval > 0 || rval > 0) && timer_elapsed(timer) > 20) || solid)
+	if (solid || (lval == 0 && rval == 0) || timer_elapsed(timer) < 20)
 		return;
 	timer = timer_read();
 
