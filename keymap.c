@@ -87,6 +87,7 @@ keyboard_post_init_user(void)
 	rgblight_sethsv_noeeprom(0, 0, 0);
 
 	ergodox_right_led_2_on();
+	ergodox_right_led_2_set(50);
 }
 
 bool
@@ -98,10 +99,12 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 	if (keycode == KC_LCTL || keycode == KC_RCTL)
 		ctrl += record->event.pressed ? 1 : -1;
 	if (keycode == LOCK && record->event.pressed) {
-		if ((lock = !lock))
+		if ((lock = !lock)) {
 			ergodox_right_led_1_on();
-		else
+			ergodox_right_led_1_set(255);
+		} else {
 			ergodox_right_led_1_off();
+		}
 	}
 	if (lock)
 		return false;
@@ -110,10 +113,12 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 
 	switch (keycode) {
 	case KC_CAPS:
-		if ((caps = !caps))
+		if ((caps = !caps)) {
 			ergodox_right_led_3_on();
-		else
+			ergodox_right_led_3_set(150);
+		} else {
 			ergodox_right_led_3_off();
+		}
 		break;
 	case MACRO:
 		SEND_STRING(SS_TAP(X_MINUS)
@@ -122,10 +127,12 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 	case DISCO:
 		if (ctrl == 0) {
 			disco = !disco, lkeys = rkeys = 0;
-			if (disco)
+			if (disco) {
 				ergodox_right_led_2_on();
-			else
+				ergodox_right_led_2_set(50);
+			} else {
 				ergodox_right_led_2_off();
+			}
 		} else if ((solid = !solid)) {
 			for (int i = 0; i < RGBLED_NUM; ++i) {
 				if (i > 7 && i < 22)
