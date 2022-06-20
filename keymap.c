@@ -47,10 +47,10 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
-enum { DISCO = EZ_SAFE_RANGE, MACRO, KLOCK };
+enum { DISCO = EZ_SAFE_RANGE, MACRO, KLOCK, SOLID };
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_ergodox_pretty(
-		KC_TRNS, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
+		SOLID,   KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
 		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KLOCK,
 
 		KC_GRV,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_EQL,
@@ -71,10 +71,24 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-bool disco = true;
+static void cond_led(uint8_t led, bool cond);
+
+bool disco = true, solid = false;
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
 uint8_t rhue, rval = 0, rkeys = 0, rmid;
 uint16_t timer;
+uint32_t sb = 0x5BCEFA, sd = 0xF5A9B8;
+
+static void
+cond_led(uint8_t led, bool cond)
+{
+	if (cond) {
+		ergodox_right_led_on(led);
+		ergodox_right_led_set(led, 150);
+	} else {
+		ergodox_right_led_off(led);
+	}
+}
 
 void
 keyboard_post_init_user(void)
@@ -93,15 +107,8 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 	if (!record->event.pressed)
 		return true;
 
-	if (keycode == KLOCK) {
-		key_lock = !key_lock;
-		if (key_lock) {
-			ergodox_right_led_on(1);
-			ergodox_right_led_set(1, 150);
-		} else {
-			ergodox_right_led_off(1);
-		}
-	}
+	if (keycode == KLOCK)
+		cond_led(1, key_lock = !key_lock);
 	if (key_lock)
 		return false;
 
@@ -113,13 +120,17 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 	case DISCO:
 		disco = !disco, lkeys = rkeys = 0;
 		break;
-	case KC_CAPS:
-		caps_lock = !caps_lock;
-		if (caps_lock) {
-			ergodox_right_led_on(3);
-			ergodox_right_led_set(3, 150);
+	case SOLID:
+		if ((solid = !solid)) {
+			for (int i = 0; i < RGBLED_NUM; ++i) {
+				if (i > 7 && i < 22)
+					setrgb(sd >> 16, sd >> 8, sd, &led[i]);
+				else
+					setrgb(sb >> 16, sb >> 8, sb, &led[i]);
+				rgblight_set(); rgblight_set();
+			}
 		} else {
-			ergodox_right_led_off(3);
+			rgblight_setrgb(0, 0, 0);
 		}
 		break;
 	default:
@@ -131,7 +142,7 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 void
 post_process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	if (!disco)
+	if (!disco || solid)
 		return;
 
 	if (!record->event.pressed) {
@@ -167,7 +178,7 @@ matrix_init_user(void)
 void
 matrix_scan_user(void)
 {
-	if (!((lval > 0 || rval > 0) && timer_elapsed(timer) > 20))
+	if (!((lval > 0 || rval > 0) && timer_elapsed(timer) > 20) || solid)
 		return;
 	timer = timer_read();
 
