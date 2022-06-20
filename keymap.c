@@ -72,16 +72,21 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 bool disco = true, solid = false;
+uint16_t timer;
+
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
 uint8_t rhue, rval = 0, rkeys = 0, rmid;
-uint16_t timer;
-uint32_t sb = 0x5BCEFA, sd = 0xF5A9B8;
+
+uint8_t or = 0x5B, og = 0xCE, ob = 0xFA;
+uint8_t ir = 0xF5, ig = 0xA9, ib = 0xB8;
 
 void
 keyboard_post_init_user(void)
 {
 	rgblight_enable_noeeprom();
 	rgblight_sethsv_noeeprom(0, 0, 0);
+
+	ergodox_right_led_2_on();
 }
 
 bool
@@ -117,12 +122,16 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 	case DISCO:
 		if (ctrl == 0) {
 			disco = !disco, lkeys = rkeys = 0;
+			if (disco)
+				ergodox_right_led_2_on();
+			else
+				ergodox_right_led_2_off();
 		} else if ((solid = !solid)) {
 			for (int i = 0; i < RGBLED_NUM; ++i) {
 				if (i > 7 && i < 22)
-					setrgb(sd >> 16, sd >> 8, sd, &led[i]);
+					setrgb(ir, ig, ib, &led[i]);
 				else
-					setrgb(sb >> 16, sb >> 8, sb, &led[i]);
+					setrgb(or, og, ob, &led[i]);
 			}
 			rgblight_set(); rgblight_set();
 		} else {
