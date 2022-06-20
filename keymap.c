@@ -47,11 +47,11 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
-enum { DISCO = EZ_SAFE_RANGE, BLOCK, MACRO };
+enum { DISCO = EZ_SAFE_RANGE, LOCK, MACRO };
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_ergodox_pretty(
 		KC_TRNS, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
-		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    BLOCK,
+		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    LOCK,
 
 		KC_GRV,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_EQL,
 		KC_MINS, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSLS,
@@ -87,42 +87,50 @@ keyboard_post_init_user(void)
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	static bool caps, key;
-	static uint16_t dtimer;
+	static int ctrl;
+	static bool caps, lock;
 
-	if (keycode == BLOCK && record->event.pressed) {
-		if ((key = !key))
+	if (keycode == KC_LCTL || keycode == KC_RCTL)
+		ctrl += record->event.pressed ? 1 : -1;
+	if (keycode == LOCK && record->event.pressed) {
+		if ((lock = !lock))
 			ergodox_right_led_1_on();
 		else
 			ergodox_right_led_1_off();
-		return false;
 	}
-	if (key)
+	if (lock)
 		return false;
-
-	if (keycode == MACRO && record->event.pressed) {
-		SEND_STRING(SS_TAP(X_MINUS)
-				SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
+	if (!record->event.pressed)
 		return true;
-	}
 
-	if (keycode == KC_CAPS && record->event.pressed) {
+	switch (keycode) {
+	case KC_CAPS:
 		if ((caps = !caps))
 			ergodox_right_led_3_on();
 		else
 			ergodox_right_led_3_off();
-		return true;
-	}
-
-	if (keycode == DISCO) {
-		disco = !disco, lkeys = rkeys = 0;
-		if (record->event.pressed) {
-			dtimer = timer_read();
-			return disco;
-		} else if (timer_elapsed(dtimer) >= TAPPING_TERM) {
-			if (!(solid = !solid))
-				rgblight_setrgb(0, 0, 0);
+		break;
+	case MACRO:
+		SEND_STRING(SS_TAP(X_MINUS)
+				SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
+		break;
+	case DISCO:
+		if (ctrl == 0) {
+			disco = !disco, lkeys = rkeys = 0;
+		} else if ((solid = !solid)) {
+			for (int i = 0; i < RGBLED_NUM; ++i) {
+				if (i > 7 && i < 22)
+					setrgb(sd >> 16, sd >> 8, sd, &led[i]);
+				else
+					setrgb(sb >> 16, sb >> 8, sb, &led[i]);
+			}
+			rgblight_set(); rgblight_set();
+		} else {
+			rgblight_setrgb(0, 0, 0);
+			lval = rval = 0;
+			return false;
 		}
+		break;
 	}
 	return true;
 }
@@ -130,22 +138,8 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 void
 post_process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	static bool run;
-	if (solid && !run) {
-		for (int i = 0; i < RGBLED_NUM; ++i) {
-			if (i > 7 && i < 22)
-				setrgb(sd >> 16, sd >> 8, sd, &led[i]);
-			else
-				setrgb(sb >> 16, sb >> 8, sb, &led[i]);
-			rgblight_set(); rgblight_set();
-		}
-		run = true;
-		return;
-	}
-
 	if (!disco || solid)
 		return;
-	run = false;
 
 	if (!record->event.pressed) {
 		if (record->event.key.row < 7 && lkeys > 0)
