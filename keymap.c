@@ -80,9 +80,7 @@ uint32_t sb = 0x5BCEFA, sd = 0xF5A9B8;
 void
 keyboard_post_init_user(void)
 {
-	/* initialise backlights after rest of hardware ready */
 	rgblight_enable_noeeprom();
-	rgblight_mode_noeeprom(1);
 	rgblight_sethsv_noeeprom(0, 0, 0);
 }
 
@@ -116,28 +114,15 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 		return true;
 	}
 
-	if (keycode != DISCO)
-		return true;
-
-	if (record->event.pressed) {
-		dtimer = timer_read();
+	if (keycode == DISCO) {
 		disco = !disco, lkeys = rkeys = 0;
-		return disco;
-	}
-
-	if (timer_elapsed(dtimer) >= TAPPING_TERM) {
-		if ((solid = !solid)) {
-			for (int i = 0; i < RGBLED_NUM; ++i) {
-				if (i > 7 && i < 22)
-					setrgb(sd >> 16, sd >> 8, sd, &led[i]);
-				else
-					setrgb(sb >> 16, sb >> 8, sb, &led[i]);
-				rgblight_set(); rgblight_set();
-			}
-		} else {
-			rgblight_setrgb(0, 0, 0);
+		if (record->event.pressed) {
+			dtimer = timer_read();
+			return disco;
+		} else if (timer_elapsed(dtimer) >= TAPPING_TERM) {
+			if (!(solid = !solid))
+				rgblight_setrgb(0, 0, 0);
 		}
-		disco = !disco, lval = rval = lkeys = rkeys = 0;
 	}
 	return true;
 }
@@ -145,8 +130,22 @@ process_record_user(uint16_t keycode, keyrecord_t *record)
 void
 post_process_record_user(uint16_t keycode, keyrecord_t *record)
 {
+	static bool run;
+	if (solid && !run) {
+		for (int i = 0; i < RGBLED_NUM; ++i) {
+			if (i > 7 && i < 22)
+				setrgb(sd >> 16, sd >> 8, sd, &led[i]);
+			else
+				setrgb(sb >> 16, sb >> 8, sb, &led[i]);
+			rgblight_set(); rgblight_set();
+		}
+		run = true;
+		return;
+	}
+
 	if (!disco || solid)
 		return;
+	run = false;
 
 	if (!record->event.pressed) {
 		if (record->event.key.row < 7 && lkeys > 0)
@@ -169,7 +168,7 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
 			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
-	rgblight_set(); /* flush */
+	rgblight_set();
 }
 
 void
@@ -195,5 +194,5 @@ matrix_scan_user(void)
 		for (int i = 0; i < RGBLED_NUM / 2; ++i)
 			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
-	rgblight_set(); /* flush */
+	rgblight_set();
 }
