@@ -1,38 +1,30 @@
 arcane - qmk keyboard configuration
 ===================================
-arcane is a flashy mechanical keyboard configuration make with qmk.  arcane
-features split reactive backlighting with a base qwerty layout and macros and
-special keys located for vim programming.
+arcane is a flashy mechanical keyboard configuration made with qmk.  arcane
+features both solid and split reactive backlighting configurations and a qwerty
+layout with macros and special keys for specialised for programming with vim.
+
+Requirements
+------------
+arcane requires teensy_loader_cli, avr-gcc version 8, and qmk_firmware.
 
 Installation
 ------------
 arcane can be downloaded, built, and flashed with the following commands:
 
-    $ # download qmk firmware from zsa, compiler, teensy loader for flashing
-    $ [ ! -d 'qmk_firmware' ] && \ 
-        git clone --recurse-submodules https://github.com/zsa/qmk_firmware/
-    # pacman -Qq avr-gcc           >/dev/null || pacman -S avr-gcc
-    # pacman -Qq teensy_loader_cli >/dev/null || pacman -S teensy_loader_cli
-    $
-    $ # downgrade compiler if ahead of version 8
-    # [ "$(pacman -Q avr-gcc | cut -d. -f1)" != "avr-gcc 8" ] && \
-        pacman -U https://archive.archlinux.org/packages/ \
-	a/avr-gcc/avr-gcc-8.3.0-1-x86_64.pkg.tar.xz
-    $
-    $ # install flashing rules, download, build, flash arcane
-    $ cd qmk_firmware; rm -rf arcane
-    # [ ! -f /etc/udev/rules.d/50-qmk.rules ] && \
-        cp util/udev/50-qmk.rules /etc/udev/rules.d/
-    $ git clone https://github.com/arcnyxx/arcane/
-    $ mv arcane keyboards/ergodox_ez/shine/keymaps/arcane
-    $ make -j 1 ergodox_ez/shine:arcane:flash
+    git clone --recurse-submodules https://github.com/zsa/qmk_firmware/
 
+    pacman -S teensy_loader_cli
+    pacman -U https://archive.archlinux.org/packages/a/avr-gcc/avr-gcc-8.3.0-1-x86_64.pkg.tar.xz
 
-Usage
------
-arcane causes flashing lights upon keypress.  To temporarily disable this
-functionality, press the key in the middle of the bottom layer on the left side
-of the keyboard.
+    cd qmk_firmware
+    cp util/udev/50-qmk.rules /etc/udev/rules.d/
+
+    git clone https://github.com/arcnyxx/arcane/
+    mkdir -p keyboards/ergodox_ez/shine/keymaps/
+    mv arcane keyboards/ergodox_ez/shine/keymaps/arcane
+    make ergodox_ez/shine:arcane:flash
+
 
 Configuration
 -------------
