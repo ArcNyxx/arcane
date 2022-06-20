@@ -47,11 +47,11 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE4] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance4_fin, dance4_set)
 };
 
-enum { DISCO = EZ_SAFE_RANGE, MACRO }; /* extra keycodes after safe range */
+enum { DISCO = EZ_SAFE_RANGE, MACRO, KLOCK };
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[0] = LAYOUT_ergodox_pretty(
 		KC_TRNS, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_TRNS,
-		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_TRNS,
+		KC_TRNS, KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KLOCK,
 
 		KC_GRV,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_EQL,
 		KC_MINS, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSLS,
@@ -67,10 +67,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 		TD(DANCE1), TD(DANCE2), TD(DANCE3), TD(DANCE4),
 		KC_TRNS, KC_TRNS,
-		KC_SPC,  KC_ESC, KC_UNDS,  MACRO,   KC_BSPC, KC_ENT
+		KC_SPC,  KC_ESC,  KC_UNDS, MACRO,   KC_BSPC, KC_ENT
 	)
 };
-
 
 bool disco = true;
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
@@ -89,11 +88,43 @@ keyboard_post_init_user(void)
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	if (keycode == MACRO && record->event.pressed)
+	static bool caps_lock, key_lock;
+
+	if (!record->event.pressed)
+		return true;
+
+	if (keycode == KLOCK) {
+		key_lock = !key_lock;
+		if (key_lock) {
+			ergodox_right_led_on(1);
+			ergodox_right_led_set(1, 150);
+		} else {
+			ergodox_right_led_off(1);
+		}
+	}
+	if (key_lock)
+		return false;
+
+	switch (keycode) {
+	case MACRO:
 		SEND_STRING(SS_TAP(X_MINUS)
 				SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
-	else if (keycode == DISCO && record->event.pressed)
-		disco = !disco, lval = rval = lkeys = rkeys = 0;
+		break;
+	case DISCO:
+		disco = !disco, lkeys = rkeys = 0;
+		break;
+	case KC_CAPS:
+		caps_lock = !caps_lock;
+		if (caps_lock) {
+			ergodox_right_led_on(3);
+			ergodox_right_led_set(3, 150);
+		} else {
+			ergodox_right_led_off(3);
+		}
+		break;
+	default:
+		break;
+	}
 	return true;
 }
 
