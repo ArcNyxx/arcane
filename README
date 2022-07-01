@@ -15,7 +15,8 @@ arcane can be downloaded, built, and flashed with the following commands:
     git clone --recurse-submodules https://github.com/zsa/qmk_firmware/
 
     pacman -S teensy_loader_cli
-    pacman -U https://archive.archlinux.org/packages/a/avr-gcc/avr-gcc-8.3.0-1-x86_64.pkg.tar.xz
+    pacman -U https://archive.archlinux.org/packages/a/avr-gcc/
+        avr-gcc-8.3.0-1-x86_64.pkg.tar.xz
 
     cd qmk_firmware
     cp util/udev/50-qmk.rules /etc/udev/rules.d/
