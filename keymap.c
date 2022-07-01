@@ -7,6 +7,13 @@
 
 #define BASE(val, ind, mid) ((uint32_t)(val) * (val) * (val) / 255 / 255) *   \
 	5 / (((ind) > (mid) ? (ind) - (mid) : (mid) - (ind)) + 5)
+#define SWITCH(num, val, ...)                                                 \
+if (__VA_ARGS__) {                                                            \
+	ergodox_right_led_ ## num ## _on();                                   \
+	ergodox_right_led_ ## num ## _set(val);                               \
+} else {                                                                      \
+	ergodox_right_led_ ## num ## _off();                                  \
+}
 #define MKDANCE(num, key1, key2, key3)                                        \
 enum { DANCE ## num = num };                                                  \
 static void dance ## num ## _fin(qk_tap_dance_state_t *state, void *data);    \
@@ -26,7 +33,6 @@ dance ## num ## _fin(qk_tap_dance_state_t *state, void *data)                 \
 static void                                                                   \
 dance ## num ## _set(qk_tap_dance_state_t *state, void *data)                 \
 {                                                                             \
-	wait_ms(10);                                                          \
 	if (state->count == 1)                                                \
 		unregister_code16(key1);                                      \
 	else if (state->count == 2)                                           \
@@ -39,6 +45,8 @@ MKDANCE(1, KC_F1,  KC_F2,  KC_F3)
 MKDANCE(2, KC_F4,  KC_F5,  KC_F6)
 MKDANCE(3, KC_F7,  KC_F8,  KC_F9)
 MKDANCE(4, KC_F10, KC_F11, KC_F12)
+
+static void set_solid(void);
 
 qk_tap_dance_action_t tap_dance_actions[] = {
 	[DANCE1] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, dance1_fin, dance1_set),
@@ -71,83 +79,84 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	)
 };
 
-bool disco = true, solid = false;
-uint16_t timer;
-
 uint8_t lhue, lval = 0, lkeys = 0, lmid;
 uint8_t rhue, rval = 0, rkeys = 0, rmid;
 
 uint8_t or = 0x5B, og = 0xCE, ob = 0xFA;
 uint8_t ir = 0xF5, ig = 0xA9, ib = 0xB8;
 
+bool solid = true, disco = false;
+uint8_t backsp[10] = { 1 };
+uint16_t timer;
+
+static void
+set_solid(void)
+{
+	for (uint8_t i = 0; i < RGBLED_NUM; ++i) {
+		if (i > 7 && i < 22)
+			setrgb(ir, ig, ib, &led[i]);
+		else
+			setrgb(or, og, ob, &led[i]);
+	}
+	rgblight_set(); rgblight_set();
+}
+
 void
 keyboard_post_init_user(void)
 {
 	rgblight_enable_noeeprom();
-	rgblight_sethsv_noeeprom(0, 0, 0);
-
-	ergodox_right_led_2_on();
-	ergodox_right_led_2_set(50);
+	set_solid();
 }
 
 bool
 process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-	static int ctrl;
+	static uint8_t ctrl;
 	static bool caps, lock;
 
 	if (keycode == KC_LCTL || keycode == KC_RCTL)
 		ctrl += record->event.pressed ? 1 : -1;
 	if (keycode == LOCK && record->event.pressed) {
-		if ((lock = !lock)) {
-			ergodox_right_led_1_on();
-			ergodox_right_led_1_set(255);
-		} else {
-			ergodox_right_led_1_off();
-		}
+		SWITCH (1, 255, (lock = !lock))
 	}
 	if (lock)
 		return false;
 	if (!record->event.pressed)
 		return true;
 
+	uint8_t addb = 1;
 	switch (keycode) {
 	case KC_CAPS:
-		if ((caps = !caps)) {
-			ergodox_right_led_3_on();
-			ergodox_right_led_3_set(150);
-		} else {
-			ergodox_right_led_3_off();
-		}
-		break;
+		SWITCH(3, 150, (caps = !caps))
+		return true;
 	case MACRO:
 		SEND_STRING(SS_TAP(X_MINUS)
 				SS_DELAY(100) SS_LSFT(SS_TAP(X_DOT)));
+		addb = 2;
 		break;
 	case DISCO:
 		if (ctrl == 0) {
 			disco = !disco, lkeys = rkeys = 0;
-			if (disco) {
-				ergodox_right_led_2_on();
-				ergodox_right_led_2_set(50);
-			} else {
-				ergodox_right_led_2_off();
-			}
 		} else if ((solid = !solid)) {
-			for (int i = 0; i < RGBLED_NUM; ++i) {
-				if (i > 7 && i < 22)
-					setrgb(ir, ig, ib, &led[i]);
-				else
-					setrgb(or, og, ob, &led[i]);
-			}
-			rgblight_set(); rgblight_set();
+			set_solid();
 		} else {
 			rgblight_setrgb(0, 0, 0);
 			lval = rval = 0;
 			return false;
 		}
-		break;
+		return true;
+	case KC_BSPC:
+		for (uint8_t i = 1; i < backsp[9]; ++i) {
+			unregister_code(KC_BSPC);
+			register_code(KC_BSPC);
+		}
+
+		memmove(&backsp[1], &backsp[0], 9 * sizeof(uint8_t));
+		backsp[0] = 1;
+		return true;
 	}
+	memmove(&backsp[0], &backsp[1], 9 * sizeof(uint8_t));
+	backsp[9] = addb;
 	return true;
 }
 
@@ -169,13 +178,13 @@ post_process_record_user(uint16_t keycode, keyrecord_t *record)
 		lhue = rand() % 255, lval = 255, ++lkeys, lmid = 15;
 		if (record->event.key.col != 5)
 			lmid = 28 - 2 * record->event.key.row;
-		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
+		for (uint8_t i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
 			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
 	} else {
 		rhue = rand() % 255, rval = 255, ++rkeys, rmid = 14;
 		if (record->event.key.col != 5)
 			rmid = 27 - 2 * record->event.key.row;
-		for (int i = 0; i < RGBLED_NUM / 2; ++i)
+		for (uint8_t i = 0; i < RGBLED_NUM / 2; ++i)
 			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
 	rgblight_set();
@@ -196,12 +205,12 @@ matrix_scan_user(void)
 
 	if (lkeys == 0 && lval > 0) {
 		lval -= 5;
-		for (int i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
+		for (uint8_t i = RGBLED_NUM / 2; i < RGBLED_NUM; ++i)
 			sethsv(lhue, 255, BASE(lval, i, lmid), &led[i]);
 	}
 	if (rkeys == 0 && rval > 0) {
 		rval -= 5;
-		for (int i = 0; i < RGBLED_NUM / 2; ++i)
+		for (uint8_t i = 0; i < RGBLED_NUM / 2; ++i)
 			sethsv(rhue, 255, BASE(rval, i, rmid), &led[i]);
 	}
 	rgblight_set();
