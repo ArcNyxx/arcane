@@ -85,7 +85,7 @@ uint8_t rhue, rval = 0, rkeys = 0, rmid;
 uint8_t or = 0x5B, og = 0xCE, ob = 0xFA;
 uint8_t ir = 0xF5, ig = 0xA9, ib = 0xB8;
 
-bool solid = true, disco = false;
+bool solid = false, disco = false;
 uint8_t backsp[10] = { 1 };
 uint16_t timer;
 
@@ -105,7 +105,7 @@ void
 keyboard_post_init_user(void)
 {
 	rgblight_enable_noeeprom();
-	set_solid();
+	rgblight_sethsv_noeeprom(0, 0, 0);
 }
 
 bool
